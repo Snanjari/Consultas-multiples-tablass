@@ -1,0 +1,119 @@
+--Simón Nanjarí
+--Desafío 3 - Consultas en múltiples tablas
+--Desafio Latam
+
+--*Tabla de datos a utilizar*
+
+--Tabla Usuarios:
+CREATE TABLE Usuarios (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR,
+    nombre VARCHAR,
+    apellido VARCHAR,
+    rol VARCHAR
+);
+
+--Tabla Post:
+CREATE TABLE Posts (
+    id SERIAL PRIMARY KEY,
+    titulo VARCHAR,
+    contenido TEXT,
+    fecha_creacion TIMESTAMP,
+    fecha_actualizacion TIMESTAMP,
+    destacado BOOLEAN,
+    usuario_id BIGINT REFERENCES Usuarios(id)
+);
+
+--Tabla Comentarios:
+CREATE TABLE Comentarios (
+    id SERIAL PRIMARY KEY,
+    contenido TEXT,
+    fecha_creacion TIMESTAMP,
+    usuario_id BIGINT REFERENCES Usuarios(id),
+    post_id BIGINT REFERENCES Posts(id)
+);
+
+-- Ingresar 5 usuarios en la base de datos 
+INSERT INTO Usuarios (email, nombre, apellido, rol)
+VALUES ('bbolson@hobbitscomarca.com', 'Bilbo', 'Bolsón', 'administrador'),
+       ('fbolson@hobbitscomarca.com', 'Frodo', 'Bolsón', 'usuario'),
+       ('sgamyi@hobbitscomarca.com', 'Samsagaz', 'Gamyi', 'usuario'),
+       ('mbrandigamo@hobbitscomarca.com', 'Meriadoc', 'Brandigamo', 'usuario'),
+       ('ptuk@hobbitscomarca.com', 'Peregrin', 'Tuk', 'usuario');
+
+--Ingresar 5 posts en la base de datos
+INSERT INTO Posts (titulo, contenido, fecha_creacion, fecha_actualizacion, destacado, usuario_id)
+VALUES ('Karate', 'Japón', NOW(), NOW(), true, 1),
+       ('Muay Thai', 'Tailandia', NOW(), NOW(), false, 1),
+       ('Capoeira', 'Brazil', NOW(), NOW(), true, 2),
+       ('Taekwondo', 'Corea', NOW(), NOW(), false, 3),
+       ('kung fu', 'China', NOW(), NOW(), true, NULL);
+
+--1 Ingresar 5 comentarios en la base de datos
+INSERT INTO Comentarios (contenido, fecha_creacion, usuario_id, post_id)
+VALUES ('Totalmente satisfecho', NOW(), 1, 1),
+       ('satisfecho', NOW(), 2, 1),
+       ('Algo Satisfecho', NOW(), 3, 1),
+       ('Insatisfecho', NOW(), 1, 2),
+       ('Totalmente Insatisfecho', NOW(), 2, 2);
+
+
+--2 Cruzar los datos de la tabla usuarios y posts
+SELECT u.nombre, u.email, p.titulo, p.contenido
+FROM Usuarios u
+INNER JOIN Posts p
+ON u.id = p.usuario_id;
+
+--3 Mostrar el id, título y contenido de los posts de los administradores
+SELECT p.id, p.titulo, p.contenido
+FROM Posts p
+INNER JOIN Usuarios u
+ON p.usuario_id = u.id
+WHERE u.rol = 'administrador' AND u.id = 1;
+
+--4 Contar la cantidad de posts
+SELECT u.id, u.email, COUNT(p.id) as cantidad_de_posts
+FROM Usuarios u
+INNER JOIN Posts p
+ON u.id = p.usuario_id
+GROUP BY u.id;
+
+--5 Mostrar el email del usuario que ha creado más posts
+SELECT u.email
+FROM Usuarios u
+INNER JOIN Posts p
+ON u.id = p.usuario_id
+GROUP BY u.id
+ORDER BY COUNT(p.id) DESC
+LIMIT 1;
+
+--6 Mostrar la fecha del último post de cada usuario
+SELECT u.id, MAX(p.fecha_creacion) as ultima_fecha_post
+FROM Usuarios u
+INNER JOIN Posts p
+ON u.id = p.usuario_id
+GROUP BY u.id;
+
+--7 Mostrar el título y contenido del post (artículo) con más comentarios
+SELECT p.titulo, p.contenido 
+FROM Posts p 
+INNER JOIN Comentarios c 
+ON c.post_id = p.id 
+GROUP BY p.id 
+ORDER BY COUNT(c.id) DESC 
+LIMIT 1;
+
+--8 Título de cada post y el contenido de cada comentario asociado a los posts mostrados junto con el email del usuario que lo escribió
+SELECT p.titulo as titulo_post, p.contenido as contenido_post, c.contenido as contenido_comentario ,u.email as email_usuario 
+FROM Posts p 
+INNER JOIN Comentarios c ON c.post_id = p.id 
+INNER JOIN Usuarios u ON c.usuario_id = u.id;
+
+--9 Muestra el contenido del último comentario de cada usuario
+SELECT DISTINCT ON (u.id) u.email as email_usuario ,c.contenido as ultimo_comentario 
+FROM Usuarios u 
+INNER JOIN Comentarios c ON c.usuario_id = u.id 
+ORDER BY u.id ,c.fecha_creacion DESC;
+
+--10 Mostrar los emails de los usuarios que no han escrito ningún comentario
+SELECT DISTINCT(u.email) FROM Usuarios AS u LEFT JOIN Comentarios AS c ON c.usuario_id=u.id GROUP BY(u.email) HAVING COUNT(c.usuario_id)=0;
